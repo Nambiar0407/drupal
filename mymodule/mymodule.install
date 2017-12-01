@@ -1,0 +1,164 @@
+<?php
+/**
+ * Implements hook_install().
+ */
+function amenity_pub_sector_install(){
+	node_types_rebuild();
+	$types = node_type_get_types();
+	node_add_body_field($types['public_sector']);
+    add_custom_fields();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function amenity_pub_sector_uninstall() {
+	$ournewtype = 'public_sector';
+    $sql = 'SELECT nid FROM {node} n WHERE n.type = :type';
+    $result = db_query($sql, array(':type' => $ournewtype));
+    $nodeids = array();
+    foreach ($result as $row) {
+        $nodeids[] = $row->nid;
+    }
+    node_delete_multiple($nodeids);
+    delete_custom_fields();
+    node_type_delete($ournewtype);
+    field_purge_batch(500);
+}
+
+function _amenity_pub_sector_installed_fields(){
+    $fields = array();
+
+    $fields['ps_entertainment_details'] = array(
+      'translatable' => '0',
+      'entity_types' => array(),
+      'settings' => array(),
+      'storage' => array(
+        'type' => 'field_sql_storage',
+        'settings' => array(),
+        'module' => 'field_sql_storage',
+        'active' => '1',
+        'details' => array(
+          'sql' => array(
+            'FIELD_LOAD_CURRENT' => array(
+              'field_data_ps_entertainment_details' => array(
+                'value' => 'ps_entertainment_details_value',
+                'format' => 'ps_entertainment_details_format',
+              ),
+            ),
+            'FIELD_LOAD_REVISION' => array(
+              'field_revision_ps_entertainment_details' => array(
+                'value' => 'ps_entertainment_details_value',
+                'format' => 'ps_entertainment_details_format',
+              ),
+            ),
+          ),
+        ),
+      ),
+      'foreign keys' => array(
+        'format' => array(
+          'table' => 'filter_format',
+          'columns' => array(
+            'format' => 'format',
+          ),
+        ),
+      ),
+      'indexes' => array(
+        'format' => array(
+          'format',
+        ),
+      ),
+      'field_name' => 'ps_entertainment_details',
+      'type' => 'text_long',
+      'module' => 'text',
+      'active' => '1',
+      'locked' => '0',
+      'cardinality' => '1',
+      'deleted' => '0',
+      'columns' => array(
+        'value' => array(
+          'type' => 'text',
+          'size' => 'big',
+          'not null' => FALSE,
+        ),
+        'format' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => FALSE,
+        ),
+      ),
+      'bundles' => array(
+        'node' => array(
+          'public_sector',
+        ),
+      ),
+    );
+
+    return $fields;
+}
+
+function _amenity_pub_sector_installed_instances(){
+    $instances = array();
+    $instances['ps_entertainment_details'] = array(
+      'label' => 'ps_entertainment_details',
+      'widget' => array(
+        'weight' => '-3',
+        'type' => 'text_textarea',
+        'module' => 'text',
+        'active' => 1,
+        'settings' => array(
+          'rows' => '5',
+        ),
+      ),
+      'settings' => array(
+        'text_processing' => '0',
+        'user_register_form' => FALSE,
+      ),
+      'display' => array(
+        'default' => array(
+          'label' => 'above',
+          'type' => 'text_default',
+          'settings' => array(),
+          'module' => 'text',
+          'weight' => 1,
+        ),
+        'teaser' => array(
+          'type' => 'hidden',
+          'label' => 'above',
+          'settings' => array(),
+          'weight' => 0,
+        ),
+      ),
+      'required' => 0,
+      'description' => '',
+      'default_value' => NULL,
+      'field_name' => 'ps_entertainment_details',
+      'entity_type' => 'node',
+      'bundle' => 'public_sector',
+      'deleted' => '0',
+    );
+    
+    return $instances;    
+}
+
+function add_custom_fields() {
+    foreach (_amenity_pub_sector_installed_fields() as $field) {
+        field_create_field($field);
+    }
+    foreach (_amenity_pub_sector_installed_instances() as $fieldinstance) {
+        $fieldinstance['entity_type'] = 'node';
+        $fieldinstance['bundle'] = 'public_sector';
+        print_r($fieldinstance);
+        field_create_instance($fieldinstance);
+    }
+}
+
+function delete_custom_fields() {
+    foreach (array_keys(_amenity_pub_sector_installed_fields()) as $field) {
+        field_delete_field($field);
+    }
+    $instances = field_info_instances('node', 'public_sector');
+    foreach ($instances as $instance_name => $fieldinstance) {
+        field_delete_instance($fieldinstance);
+    }
+}
