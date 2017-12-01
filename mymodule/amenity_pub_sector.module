@@ -1,0 +1,157 @@
+<?php
+/**
+ * @file
+ * Module file for amenity_pub_sector Module.
+ */
+
+/**
+ * Implements hook_library()
+ */
+function amenity_pub_sector_library() {
+	$libraries = array ();
+  	$libraries ['amenity_ps_library'] = array (
+    	'title' => 'Amenity Public Sector',
+    	'website' => 'http://hp.com',
+    	'version' => '1.0',
+    	'css' => array (drupal_get_path ( 'module', 'amenity_pub_sector' ) . '/css/amenity_pub_sector.css'),
+    	'js' => array(
+      			drupal_get_path('module', 'amenity_pub_sector') . '/js/amenity_pub_sector.js' => array('group' => JS_DEFAULT),
+      			drupal_get_path('module', 'amenity_pub_sector') . '/js/amenity_pub_sector_kickout.js' => array('group' => JS_DEFAULT),
+      			drupal_get_path('module', 'amenity_pub_sector') . '/js/amenity_pub_sector.calculate.js' => array('group' => JS_DEFAULT),
+      			drupal_get_path('module', 'amenity_pub_sector') . '/js/amenity_pub_sector_dates.js' => array('group' => JS_DEFAULT),
+      			drupal_get_path('module', 'amenity_pub_sector') . '/js/amenity_pub_sector_approved.js' => array('group' => JS_DEFAULT),
+    			),
+	);
+
+	return $libraries; 
+}
+
+
+/**
+ * Implements hook_node_info()
+ */
+
+ function amenity_pub_sector_node_info(){
+	return array(
+    	'public_sector' => array(
+      		'name' => t('Public Sector Amenities'),
+      		'base' => 'public_sector',
+      		'description' => t('Fields for public sector forms.'),
+      		'has_title' => TRUE,
+      		'title_label' => t('Public sector amenities'),
+      		'locked' => TRUE,
+    	),
+  	); 	
+ }
+
+
+
+/**
+ * Implement hook_form()
+ */
+function public_sector_form($form, &$form_state){
+	return node_content_form($node, $form_state);
+}
+
+/**
+ * Implements hook_menu()
+ */
+function amenity_pub_sector_menu(){
+	$items = array();
+
+	$items['publicsector'] = array(
+			'title' => t('Public Sector Amenities'),
+			'description' => t('Public Sector Amenities'),
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('public_sector_forms'),
+			'access arguments' => array('access content'),
+			'type' => MENU_NORMAL_ITEM,
+		);
+
+	$items['publicsector/request'] = array(
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('new_public_sector_form'),
+			'access arguments' => array('access content'),
+			'file' => 'amenity_pub_sector_form.inc',
+			'access callback' => TRUE,
+		);
+
+	return $items;
+}
+
+function public_sector_forms($form, &$form_state){
+// Public sector options to select from.
+	$psoptions = array(
+		'events' => t('<strong>Event Invitations and Passes</strong>'),
+		'meals' => t('<strong>Meals and/or Entertainment</strong>'),
+		'gifts' => t('<strong>Gifts</strong>'), 
+		'travel' => t('<strong>Travel</strong>'),
+	);
+
+	$form['ps_amenities'] = array(
+		'#type' => 'checkboxes',
+	  	'#title' => t('<h3>Select Amenity</h3> (Select one or more amenities as applicable)'),
+	  	'#options' => $psoptions,
+	  	'#required' => TRUE,
+	);
+
+	$form['ps_amenities']['meals']['#description'] = t('<p style="margin-left:1em;"><i>This option is for business meals and/or entertainment in which an HPE employee will be attending with the recipient. <strong>DO NOT</strong> use this option for meals and/or entertainment in connection with attendance at an HPE event; use "Event Invitations and Passes" instead. ($150 per meal limit unless a more restrictive country rule applies.)</i></p>');
+	$form['ps_amenities']['gifts']['#description'] = t('<p style="margin-left:1em;"><i>This option is for giving any item of value to a third party, and includes tickets or passes to activities when an HPE employee is not in attendance. <strong>DO NOT</strong> use this option for gifts provided to all attendees at an HPE event; use "Event Invitations and Passes" instead.  ($50 limit unless a more restrictive country rule applies.)</i></p>');
+	$form['ps_amenities']['travel']['#description'] = t('<p style="margin-left:1em;"><i>This option is for all requests to provide free or discounted travel and/or accommodation, whether or not it is related to attendance at an Event</i></p>');
+	$form['ps_amenities']['events']['#description'] = t('<p style="margin-left:1em;"><i>Select this option for<ol><li>To provide a free or discounted pass to an event that attendees pay to attend, (e.g., Discover)</li><li>To extend an invitation to an event where amenities will be provided even if attendees are not expected to pay for admission (e.g., CIO Summit 2017)</li></ol> <ul>An “Event” is an activity that involves 10 or more attendees and $5,000 or more in contractual obligations related to arranging the activity, and where HPE products and services are showcased. </ul></i></p>');
+
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => t('Submit'),
+	 );
+
+	return $form;
+}
+
+
+function public_sector_forms_submit($form, $form_state) {
+	$steps_array = array();
+	$step_key = 0;
+
+	if(($form['ps_amenities']['events']['#value'])){
+	  $step_key = $step_key + 1;
+	  $steps_array[$step_key] = array(
+		  'form' => 'public_sector_amenities_wizard_events',
+		  'title' => 'Event Invitations and Passes',
+	  	);
+	}
+
+	if(($form['ps_amenities']['meals']['#value'])){
+	  $step_key = $step_key + 1;
+	  $steps_array[$step_key] = array(
+		  'form' => 'public_sector_amenities_wizard_meals',
+		  'title' => 'Meals and/or Entertainment',
+	  	);
+	}
+
+	if(($form['ps_amenities']['gifts']['#value'])){
+	  $step_key = $step_key + 1;
+	  $steps_array[$step_key] = array(
+		  'form' => 'public_sector_amenities_wizard_gifts',
+		  'title' => 'Gifts',
+		);
+	}
+
+	if(($form['ps_amenities']['travel']['#value'])){
+	  $step_key = $step_key + 1;
+	  $steps_array[$step_key] = array(
+		  'form' => 'public_sector_amenities_wizard_travel',
+		  'title' => 'Travel',
+		);
+	}
+
+	$_SESSION['steps_array'] = $steps_array;
+	$form_state['redirect'] =  'publicsector/request';
+	drupal_redirect_form($form_state);
+ } 
+
+/**
+ * Bring in the includes
+ */
+// module_load_include('inc', 'amenity_pub_sector', 'amenity_pub_sector_fields');
+// module_load_include('inc', 'amenity_pub_sector', 'amenity_pub_sector_instances');
